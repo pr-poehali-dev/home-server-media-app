@@ -63,6 +63,7 @@ const Index = () => {
   const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentFileIndex, setCurrentFileIndex] = useState(0);
+  const [files, setFiles] = useState<Record<string, FileItem[]>>(mockFiles);
 
   const handleCategoryClick = (categoryId: string) => {
     setSelectedCategory(categoryId);
@@ -144,8 +145,23 @@ const Index = () => {
     });
   };
 
+  const handleDeleteFile = (fileId: string, categoryId: string) => {
+    setFiles(prev => ({
+      ...prev,
+      [categoryId]: prev[categoryId].filter(f => f.id !== fileId)
+    }));
+    if (lightboxOpen) {
+      const newFilteredFiles = files[categoryId].filter(f => f.id !== fileId);
+      if (newFilteredFiles.length === 0) {
+        handleCloseLightbox();
+      } else if (currentFileIndex >= newFilteredFiles.length) {
+        setCurrentFileIndex(newFilteredFiles.length - 1);
+      }
+    }
+  };
+
   const currentCategory = categories.find(c => c.id === selectedCategory);
-  const currentFiles = selectedCategory ? (mockFiles[selectedCategory] || []) : [];
+  const currentFiles = selectedCategory ? (files[selectedCategory] || []) : [];
   
   const years = selectedCategory === 'photos' 
     ? Array.from(new Set(currentFiles.map(f => f.year).filter(Boolean)))
@@ -277,15 +293,14 @@ const Index = () => {
                 {filteredFiles.map((file, index) => (
                   <Card 
                     key={file.id}
-                    onClick={() => handleFileClick(index)}
-                    className="hover:bg-muted/50 transition-all cursor-pointer animate-scale-in border-border"
+                    className="hover:bg-muted/50 transition-all animate-scale-in border-border"
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <CardContent className="flex items-center gap-4 p-4">
                       <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${currentCategory?.gradient} flex items-center justify-center flex-shrink-0`}>
                         <Icon name="File" size={20} className="text-white" />
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0" onClick={() => handleFileClick(index)}>
                         <p className="font-medium text-foreground truncate">{file.name}</p>
                         <div className="flex gap-3 text-sm text-muted-foreground mt-1">
                           <span>{file.size}</span>
@@ -293,7 +308,19 @@ const Index = () => {
                           <span>{file.date}</span>
                         </div>
                       </div>
-                      <Icon name="ChevronRight" size={20} className="text-muted-foreground flex-shrink-0" />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="flex-shrink-0 hover:bg-red-500/20 hover:text-red-500"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (selectedCategory) {
+                            handleDeleteFile(file.id, selectedCategory);
+                          }
+                        }}
+                      >
+                        <Icon name="Trash2" size={20} />
+                      </Button>
                     </CardContent>
                   </Card>
                 ))}
@@ -307,9 +334,22 @@ const Index = () => {
                     className="group hover:scale-105 transition-all cursor-pointer animate-scale-in border-border overflow-hidden"
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
-                    <CardContent className="p-0">
-                      <div className={`aspect-square bg-gradient-to-br ${currentCategory?.gradient} flex items-center justify-center`}>
+                    <CardContent className="p-0 relative group">
+                      <div className={`aspect-square bg-gradient-to-br ${currentCategory?.gradient} flex items-center justify-center relative`}>
                         <Icon name={currentCategory?.icon || 'File'} size={48} className="text-white" />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 hover:bg-red-500/80 text-white"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (selectedCategory) {
+                              handleDeleteFile(file.id, selectedCategory);
+                            }
+                          }}
+                        >
+                          <Icon name="Trash2" size={18} />
+                        </Button>
                       </div>
                       <div className="p-3">
                         <p className="font-medium text-foreground text-sm truncate mb-1">{file.name}</p>
@@ -328,14 +368,29 @@ const Index = () => {
             className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center animate-fade-in"
             onClick={handleCloseLightbox}
           >
-            <Button
-              onClick={handleCloseLightbox}
-              variant="ghost"
-              size="icon"
-              className="absolute top-4 right-4 text-white hover:bg-white/20 z-10"
-            >
-              <Icon name="X" size={32} />
-            </Button>
+            <div className="absolute top-4 right-4 flex gap-2 z-10">
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (selectedCategory) {
+                    handleDeleteFile(filteredFiles[currentFileIndex].id, selectedCategory);
+                  }
+                }}
+                variant="ghost"
+                size="icon"
+                className="text-white hover:bg-red-500/50"
+              >
+                <Icon name="Trash2" size={28} />
+              </Button>
+              <Button
+                onClick={handleCloseLightbox}
+                variant="ghost"
+                size="icon"
+                className="text-white hover:bg-white/20"
+              >
+                <Icon name="X" size={32} />
+              </Button>
+            </div>
 
             <Button
               onClick={(e) => {
