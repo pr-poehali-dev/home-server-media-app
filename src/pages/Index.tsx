@@ -4,6 +4,16 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 type Category = {
   id: string;
@@ -64,6 +74,8 @@ const Index = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentFileIndex, setCurrentFileIndex] = useState(0);
   const [files, setFiles] = useState<Record<string, FileItem[]>>(mockFiles);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [fileToDelete, setFileToDelete] = useState<{id: string, category: string, name: string} | null>(null);
 
   const handleCategoryClick = (categoryId: string) => {
     setSelectedCategory(categoryId);
@@ -145,19 +157,31 @@ const Index = () => {
     });
   };
 
-  const handleDeleteFile = (fileId: string, categoryId: string) => {
+  const confirmDeleteFile = (fileId: string, categoryId: string, fileName: string) => {
+    setFileToDelete({id: fileId, category: categoryId, name: fileName});
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteFile = () => {
+    if (!fileToDelete) return;
+
+    const { id, category } = fileToDelete;
     setFiles(prev => ({
       ...prev,
-      [categoryId]: prev[categoryId].filter(f => f.id !== fileId)
+      [category]: prev[category].filter(f => f.id !== id)
     }));
+    
     if (lightboxOpen) {
-      const newFilteredFiles = files[categoryId].filter(f => f.id !== fileId);
+      const newFilteredFiles = files[category].filter(f => f.id !== id);
       if (newFilteredFiles.length === 0) {
         handleCloseLightbox();
       } else if (currentFileIndex >= newFilteredFiles.length) {
         setCurrentFileIndex(newFilteredFiles.length - 1);
       }
     }
+    
+    setDeleteDialogOpen(false);
+    setFileToDelete(null);
   };
 
   const currentCategory = categories.find(c => c.id === selectedCategory);
@@ -315,7 +339,7 @@ const Index = () => {
                         onClick={(e) => {
                           e.stopPropagation();
                           if (selectedCategory) {
-                            handleDeleteFile(file.id, selectedCategory);
+                            confirmDeleteFile(file.id, selectedCategory, file.name);
                           }
                         }}
                       >
@@ -344,7 +368,7 @@ const Index = () => {
                           onClick={(e) => {
                             e.stopPropagation();
                             if (selectedCategory) {
-                              handleDeleteFile(file.id, selectedCategory);
+                              confirmDeleteFile(file.id, selectedCategory, file.name);
                             }
                           }}
                         >
@@ -373,7 +397,11 @@ const Index = () => {
                 onClick={(e) => {
                   e.stopPropagation();
                   if (selectedCategory) {
-                    handleDeleteFile(filteredFiles[currentFileIndex].id, selectedCategory);
+                    confirmDeleteFile(
+                      filteredFiles[currentFileIndex].id, 
+                      selectedCategory,
+                      filteredFiles[currentFileIndex].name
+                    );
                   }
                 }}
                 variant="ghost"
@@ -433,6 +461,27 @@ const Index = () => {
             </div>
           </div>
         )}
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Удалить файл?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Вы уверены, что хотите удалить файл <span className="font-semibold text-foreground">{fileToDelete?.name}</span>? 
+                Это действие нельзя будет отменить.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Отмена</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteFile}
+                className="bg-red-500 hover:bg-red-600"
+              >
+                Удалить
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     );
   }
