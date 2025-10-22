@@ -61,6 +61,8 @@ const Index = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [isDragging, setIsDragging] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [currentFileIndex, setCurrentFileIndex] = useState(0);
 
   const handleCategoryClick = (categoryId: string) => {
     setSelectedCategory(categoryId);
@@ -73,6 +75,23 @@ const Index = () => {
     setSelectedYear(null);
     setSearchQuery('');
     setViewMode('list');
+  };
+
+  const handleFileClick = (index: number) => {
+    setCurrentFileIndex(index);
+    setLightboxOpen(true);
+  };
+
+  const handleNextFile = () => {
+    setCurrentFileIndex((prev) => (prev + 1) % filteredFiles.length);
+  };
+
+  const handlePrevFile = () => {
+    setCurrentFileIndex((prev) => (prev - 1 + filteredFiles.length) % filteredFiles.length);
+  };
+
+  const handleCloseLightbox = () => {
+    setLightboxOpen(false);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -241,6 +260,7 @@ const Index = () => {
                 {filteredFiles.map((file, index) => (
                   <Card 
                     key={file.id}
+                    onClick={() => handleFileClick(index)}
                     className="hover:bg-muted/50 transition-all cursor-pointer animate-scale-in border-border"
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
@@ -266,6 +286,7 @@ const Index = () => {
                 {filteredFiles.map((file, index) => (
                   <Card 
                     key={file.id}
+                    onClick={() => handleFileClick(index)}
                     className="group hover:scale-105 transition-all cursor-pointer animate-scale-in border-border overflow-hidden"
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
@@ -284,6 +305,62 @@ const Index = () => {
             )}
           </div>
         </div>
+
+        {lightboxOpen && (
+          <div 
+            className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center animate-fade-in"
+            onClick={handleCloseLightbox}
+          >
+            <Button
+              onClick={handleCloseLightbox}
+              variant="ghost"
+              size="icon"
+              className="absolute top-4 right-4 text-white hover:bg-white/20 z-10"
+            >
+              <Icon name="X" size={32} />
+            </Button>
+
+            <Button
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePrevFile();
+              }}
+              variant="ghost"
+              size="icon"
+              className="absolute left-4 text-white hover:bg-white/20 z-10"
+            >
+              <Icon name="ChevronLeft" size={48} />
+            </Button>
+
+            <Button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleNextFile();
+              }}
+              variant="ghost"
+              size="icon"
+              className="absolute right-4 text-white hover:bg-white/20 z-10"
+            >
+              <Icon name="ChevronRight" size={48} />
+            </Button>
+
+            <div className="max-w-7xl max-h-[90vh] flex flex-col items-center justify-center p-8" onClick={(e) => e.stopPropagation()}>
+              <div className={`w-full aspect-video max-h-[70vh] rounded-2xl bg-gradient-to-br ${currentCategory?.gradient} flex items-center justify-center mb-6 shadow-2xl`}>
+                <Icon name={currentCategory?.icon || 'File'} size={120} className="text-white" />
+              </div>
+              <div className="text-center">
+                <h2 className="text-2xl font-bold text-white mb-2">{filteredFiles[currentFileIndex]?.name}</h2>
+                <div className="flex gap-4 text-white/80 justify-center">
+                  <span>{filteredFiles[currentFileIndex]?.size}</span>
+                  <span>•</span>
+                  <span>{filteredFiles[currentFileIndex]?.date}</span>
+                  <span>•</span>
+                  <span>{currentFileIndex + 1} / {filteredFiles.length}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
