@@ -1,11 +1,204 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from 'react';
+import Icon from '@/components/ui/icon';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+
+type Category = {
+  id: string;
+  name: string;
+  icon: string;
+  count: number;
+  gradient: string;
+};
+
+type FileItem = {
+  id: string;
+  name: string;
+  size: string;
+  date: string;
+  year?: string;
+};
+
+const categories: Category[] = [
+  { id: 'photos', name: 'Фото', icon: 'Image', count: 1245, gradient: 'from-purple-600 to-purple-400' },
+  { id: 'videos', name: 'Видео', icon: 'Video', count: 324, gradient: 'from-blue-600 to-blue-400' },
+  { id: 'documents', name: 'Документы', icon: 'FileText', count: 892, gradient: 'from-green-600 to-green-400' },
+  { id: 'movies', name: 'Фильмы', icon: 'Film', count: 156, gradient: 'from-red-600 to-red-400' },
+  { id: 'work', name: 'Работа', icon: 'Briefcase', count: 567, gradient: 'from-orange-600 to-orange-400' },
+  { id: 'software', name: 'Софт', icon: 'Package', count: 89, gradient: 'from-pink-600 to-pink-400' },
+  { id: 'music', name: 'Музыка', icon: 'Music', count: 2341, gradient: 'from-indigo-600 to-indigo-400' },
+  { id: 'archives', name: 'Архивы', icon: 'Archive', count: 234, gradient: 'from-cyan-600 to-cyan-400' },
+];
+
+const mockFiles: Record<string, FileItem[]> = {
+  photos: [
+    { id: '1', name: 'IMG_2024_001.jpg', size: '4.2 MB', date: '15 окт 2024', year: '2024' },
+    { id: '2', name: 'IMG_2024_002.jpg', size: '3.8 MB', date: '14 окт 2024', year: '2024' },
+    { id: '3', name: 'IMG_2023_156.jpg', size: '5.1 MB', date: '22 дек 2023', year: '2023' },
+    { id: '4', name: 'IMG_2023_089.jpg', size: '4.5 MB', date: '10 июн 2023', year: '2023' },
+    { id: '5', name: 'IMG_2022_234.jpg', size: '3.9 MB', date: '5 май 2022', year: '2022' },
+  ],
+  videos: [
+    { id: '1', name: 'video_2024_summer.mp4', size: '124 MB', date: '10 авг 2024' },
+    { id: '2', name: 'family_trip.mov', size: '89 MB', date: '5 июл 2024' },
+  ],
+  documents: [
+    { id: '1', name: 'Отчет_2024.pdf', size: '2.1 MB', date: '20 окт 2024' },
+    { id: '2', name: 'Договор.docx', size: '145 KB', date: '18 окт 2024' },
+  ],
+};
 
 const Index = () => {
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedYear, setSelectedYear] = useState<string | null>(null);
+
+  const handleCategoryClick = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    setSelectedYear(null);
+    setSearchQuery('');
+  };
+
+  const handleBack = () => {
+    setSelectedCategory(null);
+    setSelectedYear(null);
+    setSearchQuery('');
+  };
+
+  const currentCategory = categories.find(c => c.id === selectedCategory);
+  const currentFiles = selectedCategory ? (mockFiles[selectedCategory] || []) : [];
+  
+  const years = selectedCategory === 'photos' 
+    ? Array.from(new Set(currentFiles.map(f => f.year).filter(Boolean)))
+    : [];
+
+  const filteredFiles = currentFiles.filter(file => {
+    const matchesSearch = file.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesYear = !selectedYear || file.year === selectedYear;
+    return matchesSearch && matchesYear;
+  });
+
+  if (selectedCategory) {
+    return (
+      <div className="min-h-screen bg-background p-4 md:p-8 animate-fade-in">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center gap-4 mb-8">
+            <Button 
+              onClick={handleBack}
+              variant="ghost" 
+              size="icon"
+              className="hover:bg-muted"
+            >
+              <Icon name="ArrowLeft" size={24} />
+            </Button>
+            <div className="flex items-center gap-3">
+              <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${currentCategory?.gradient} flex items-center justify-center`}>
+                <Icon name={currentCategory?.icon || 'Folder'} size={24} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">{currentCategory?.name}</h1>
+                <p className="text-muted-foreground">{currentCategory?.count} файлов</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="flex-1">
+              <Input
+                placeholder="Поиск файлов..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-card border-border"
+              />
+            </div>
+            {years.length > 0 && (
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  variant={selectedYear === null ? "default" : "outline"}
+                  onClick={() => setSelectedYear(null)}
+                  className="rounded-full"
+                >
+                  Все
+                </Button>
+                {years.map(year => (
+                  <Button
+                    key={year}
+                    variant={selectedYear === year ? "default" : "outline"}
+                    onClick={() => setSelectedYear(year || null)}
+                    className="rounded-full"
+                  >
+                    {year}
+                  </Button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="grid gap-3">
+            {filteredFiles.map((file, index) => (
+              <Card 
+                key={file.id}
+                className="hover:bg-muted/50 transition-all cursor-pointer animate-scale-in border-border"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <CardContent className="flex items-center gap-4 p-4">
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${currentCategory?.gradient} flex items-center justify-center flex-shrink-0`}>
+                    <Icon name="File" size={20} className="text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-foreground truncate">{file.name}</p>
+                    <div className="flex gap-3 text-sm text-muted-foreground mt-1">
+                      <span>{file.size}</span>
+                      <span>•</span>
+                      <span>{file.date}</span>
+                    </div>
+                  </div>
+                  <Icon name="ChevronRight" size={20} className="text-muted-foreground flex-shrink-0" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4 color-black text-black">Добро пожаловать!</h1>
-        <p className="text-xl text-gray-600">тут будет отображаться ваш проект</p>
+    <div className="min-h-screen bg-background p-4 md:p-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-4xl font-bold text-foreground mb-2">Файловый Менеджер</h1>
+            <p className="text-muted-foreground">Управление файлами домашнего сервера</p>
+          </div>
+          <Icon name="HardDrive" size={32} className="text-primary" />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {categories.map((category, index) => (
+            <Card
+              key={category.id}
+              onClick={() => handleCategoryClick(category.id)}
+              className="group cursor-pointer hover:scale-105 transition-all duration-300 border-border animate-scale-in overflow-hidden"
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              <CardContent className="p-6">
+                <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${category.gradient} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                  <Icon name={category.icon} size={32} className="text-white" />
+                </div>
+                <h3 className="text-xl font-semibold text-foreground mb-2">{category.name}</h3>
+                <div className="flex items-center justify-between">
+                  <Badge variant="secondary" className="bg-muted text-muted-foreground">
+                    {category.count} файлов
+                  </Badge>
+                  <Icon name="ChevronRight" size={20} className="text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     </div>
   );
