@@ -19,7 +19,11 @@ type FileItem = {
   size: string;
   date: string;
   year?: string;
+  type?: string;
+  thumbnail?: string;
 };
+
+type ViewMode = 'list' | 'grid';
 
 const categories: Category[] = [
   { id: 'photos', name: 'Фото', icon: 'Image', count: 1245, gradient: 'from-purple-600 to-purple-400' },
@@ -54,6 +58,9 @@ const Index = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedYear, setSelectedYear] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
 
   const handleCategoryClick = (categoryId: string) => {
     setSelectedCategory(categoryId);
@@ -65,6 +72,40 @@ const Index = () => {
     setSelectedCategory(null);
     setSelectedYear(null);
     setSearchQuery('');
+    setViewMode('list');
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    files.forEach(file => {
+      setUploadingFiles(prev => [...prev, file.name]);
+      setTimeout(() => {
+        setUploadingFiles(prev => prev.filter(f => f !== file.name));
+      }, 2000);
+    });
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    files.forEach(file => {
+      setUploadingFiles(prev => [...prev, file.name]);
+      setTimeout(() => {
+        setUploadingFiles(prev => prev.filter(f => f !== file.name));
+      }, 2000);
+    });
   };
 
   const currentCategory = categories.find(c => c.id === selectedCategory);
@@ -113,52 +154,134 @@ const Index = () => {
                 className="bg-card border-border"
               />
             </div>
-            {years.length > 0 && (
-              <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2">
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'outline'}
+                size="icon"
+                onClick={() => setViewMode('list')}
+              >
+                <Icon name="List" size={20} />
+              </Button>
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'outline'}
+                size="icon"
+                onClick={() => setViewMode('grid')}
+              >
+                <Icon name="Grid3x3" size={20} />
+              </Button>
+              <label htmlFor="file-upload">
+                <Button variant="default" className="cursor-pointer" asChild>
+                  <span>
+                    <Icon name="Upload" size={20} className="mr-2" />
+                    Загрузить
+                  </span>
+                </Button>
+              </label>
+              <input
+                id="file-upload"
+                type="file"
+                multiple
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+            </div>
+          </div>
+          {years.length > 0 && (
+            <div className="flex gap-2 flex-wrap mb-6">
+              <Button
+                variant={selectedYear === null ? "default" : "outline"}
+                onClick={() => setSelectedYear(null)}
+                className="rounded-full"
+              >
+                Все
+              </Button>
+              {years.map(year => (
                 <Button
-                  variant={selectedYear === null ? "default" : "outline"}
-                  onClick={() => setSelectedYear(null)}
+                  key={year}
+                  variant={selectedYear === year ? "default" : "outline"}
+                  onClick={() => setSelectedYear(year || null)}
                   className="rounded-full"
                 >
-                  Все
+                  {year}
                 </Button>
-                {years.map(year => (
-                  <Button
-                    key={year}
-                    variant={selectedYear === year ? "default" : "outline"}
-                    onClick={() => setSelectedYear(year || null)}
-                    className="rounded-full"
-                  >
-                    {year}
-                  </Button>
+              ))}
+            </div>
+          )}
+
+          <div 
+            className={`relative ${isDragging ? 'opacity-50' : ''}`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            {isDragging && (
+              <div className="absolute inset-0 border-4 border-dashed border-primary rounded-2xl flex items-center justify-center bg-primary/10 z-10">
+                <div className="text-center">
+                  <Icon name="Upload" size={48} className="mx-auto mb-2 text-primary" />
+                  <p className="text-xl font-semibold text-foreground">Перетащите файлы сюда</p>
+                </div>
+              </div>
+            )}
+            
+            {uploadingFiles.length > 0 && (
+              <div className="mb-4 space-y-2">
+                {uploadingFiles.map((fileName, idx) => (
+                  <Card key={idx} className="border-primary">
+                    <CardContent className="flex items-center gap-3 p-3">
+                      <Icon name="Loader2" size={20} className="animate-spin text-primary" />
+                      <span className="text-sm text-foreground">Загружается: {fileName}</span>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             )}
-          </div>
 
-          <div className="grid gap-3">
-            {filteredFiles.map((file, index) => (
-              <Card 
-                key={file.id}
-                className="hover:bg-muted/50 transition-all cursor-pointer animate-scale-in border-border"
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <CardContent className="flex items-center gap-4 p-4">
-                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${currentCategory?.gradient} flex items-center justify-center flex-shrink-0`}>
-                    <Icon name="File" size={20} className="text-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-foreground truncate">{file.name}</p>
-                    <div className="flex gap-3 text-sm text-muted-foreground mt-1">
-                      <span>{file.size}</span>
-                      <span>•</span>
-                      <span>{file.date}</span>
-                    </div>
-                  </div>
-                  <Icon name="ChevronRight" size={20} className="text-muted-foreground flex-shrink-0" />
-                </CardContent>
-              </Card>
-            ))}
+            {viewMode === 'list' ? (
+              <div className="grid gap-3">
+                {filteredFiles.map((file, index) => (
+                  <Card 
+                    key={file.id}
+                    className="hover:bg-muted/50 transition-all cursor-pointer animate-scale-in border-border"
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    <CardContent className="flex items-center gap-4 p-4">
+                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${currentCategory?.gradient} flex items-center justify-center flex-shrink-0`}>
+                        <Icon name="File" size={20} className="text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground truncate">{file.name}</p>
+                        <div className="flex gap-3 text-sm text-muted-foreground mt-1">
+                          <span>{file.size}</span>
+                          <span>•</span>
+                          <span>{file.date}</span>
+                        </div>
+                      </div>
+                      <Icon name="ChevronRight" size={20} className="text-muted-foreground flex-shrink-0" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {filteredFiles.map((file, index) => (
+                  <Card 
+                    key={file.id}
+                    className="group hover:scale-105 transition-all cursor-pointer animate-scale-in border-border overflow-hidden"
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    <CardContent className="p-0">
+                      <div className={`aspect-square bg-gradient-to-br ${currentCategory?.gradient} flex items-center justify-center`}>
+                        <Icon name={currentCategory?.icon || 'File'} size={48} className="text-white" />
+                      </div>
+                      <div className="p-3">
+                        <p className="font-medium text-foreground text-sm truncate mb-1">{file.name}</p>
+                        <p className="text-xs text-muted-foreground">{file.size}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
